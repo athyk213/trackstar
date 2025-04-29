@@ -8,7 +8,7 @@ First, clone the repository to your local machine:
 
 ```bash
 git clone https://github.com/athyk213/trackstar.git
-cd trackpack
+cd trackstar
 ```
 
 ## Downloading Data
