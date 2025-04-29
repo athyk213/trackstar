@@ -2,29 +2,17 @@
 
 This repository contains the pipelines for infraction detection in track & field competitions. It uses a custom-trained YOLOv11 classification model paired with computer vision techniques for motion detection. Follow the instructions below to set up the environment and run the different pipelines. This system has been tested with the Autel Evo II Pro drone.
 
-## Cloning the Repository
-
-First, clone the repository to your local machine:
-
-```bash
-git clone https://github.com/athyk213/trackstar.git
-cd trackstar
-```
-
-## Downloading Data
-Download the necessary data [here](https://utexas.app.box.com/folder/304045179819), create a new directory called `videos` in the root directory of this repo, and move the downloaded data into `videos`.
+## Data Loading (Optional)
+Store any video data in a folder called `videos` in the root directory of this repo.
 
 Example file structure:
 ```
 trackpack/
 ├── videos/
 │   └── 2-08
-│       ├── MAX_0029.MP4
-│       ├── MAX_0030.MP4
-│       ├── MAX_0031.MP4
-│       ├── MAX_0033.MP4
-│       ├── MAX_0034.MP4
-│       └── MAX_0036.MP4
+│       ├── Video-1.mp4
+│       ├── Video-2.mp4
+│       └── Video-3.mp4
 ├── CameraCalibration/
 ├── pipeline/
 ├── ...
@@ -49,7 +37,7 @@ This pipeline is used to detect infractions while we are **out on the track**. I
 ```
 
 ### Full Pipeline
-This pipeline is used to detect infractions in **videos that are stored in a videos/ directory** (as shown in the example file structure above). It uses the `pipeline/full_pipeline.py` file. Right now, it is set to take in videos from the `videos/demo` directory so that we can demo the full integration between the pipeline and the GUI. Run the following command during demos:
+This pipeline is used to detect infractions in **videos that are stored in a videos/ directory** (as shown in the example file structure above). It uses the `pipeline/full_pipeline.py` file, where you can modify the input/output directories. Run the following command to run the infraction detection on videos:
 
 ```bash
 ./run_full.sh
