@@ -1,6 +1,6 @@
 # Project Trackstar
 
-This repository contains the pipelines for infraction detection in track & field competitions. It uses a custom-trained YOLOv11 classification model paired with computer vision techniques for motion detection. Follow the instructions below to set up the environment and run the different pipelines.
+This repository contains the pipelines for infraction detection in track & field competitions. It uses a custom-trained YOLOv11 classification model paired with computer vision techniques for motion detection. Follow the instructions below to set up the environment and run the different pipelines. This system has been tested with the Autel Evo II Pro drone.
 
 ## Cloning the Repository
 
