@@ -1,0 +1,10 @@
+pipeline/yolo/
+1920x1080/
+.vscode/
+v*-results/
+data/
+*infractions*
+runs/
+videos/
+yolo/
+test_deployment/

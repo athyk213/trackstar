@@ -1,0 +1,20 @@
+{
+  "paths": {
+    "inputDir": "../../2-08",
+    "outputDir": "../v1-results"
+  },
+  "frameSkip": 2,
+  "confidenceThreshold": 0.2,
+  "nmsThreshold": 0,
+  "scalingFactor": 3.3,
+  "topCrop": 300,
+  "bottomCrop": 200,
+  "boundingBox": {
+    "width": 175,
+    "height": 200
+  },
+  "model": {
+    "cfgPath": "../yolo/yolov4.cfg",
+    "weightsPath": "../yolo/yolov4.weights"
+  }
+}

@@ -1,0 +1,2277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Infraction Viewer</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Base styles */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+            color: #333333;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .container-fluid {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+            position: relative;
+        }
+        
+        /* Header styles */
+        .page-title {
+            text-align: left;
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: white;
+            background: linear-gradient(to right, #bf5700, #d96200);
+            padding: 10px 20px;
+            height: 50px;
+            line-height: 30px;
+            position: relative;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            z-index: 10;
+        }
+        
+        /* Button styling */
+        .action-button {
+            position: absolute;
+            top: 8px;
+            padding: 6px 12px;
+            background-color: rgba(139, 63, 0, 0.9);
+            cursor: pointer;
+            margin: 0;
+            z-index: 100;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            transition: all 0.25s ease;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .action-button:hover {
+            background-color: rgba(217, 98, 0, 1);
+            transform: translateY(-1px);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.25);
+        }
+        
+        #toggle-fullscreen {
+            right: 140px;
+        }
+        
+        #reset-zoom-btn {
+            right: 10px;
+        }
+        
+        /* Panel styling */
+        .panel-header {
+            background: linear-gradient(to right, #4a4a4a, #5a5a5a);
+            color: white;
+            padding: 8px 16px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 0;
+            margin: 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.25s ease;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .panel-header:hover {
+            background: linear-gradient(to right, #5a5a5a, #6a6a6a);
+        }
+        
+        .panel-title {
+            font-weight: 600;
+            font-size: 15px;
+            letter-spacing: 0.3px;
+        }
+        
+        .panel-arrow {
+            font-size: 14px;
+            transition: transform 0.3s;
+            opacity: 0.9;
+        }
+        
+        .panel-arrow.down {
+            transform: rotate(180deg);
+        }
+        
+        .panel-content {
+            overflow: hidden;
+            transition: all 0.3s ease;
+            background-color: white;
+            border-bottom: 1px solid #dee2e6;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+        }
+        
+        .panel-content.collapsed {
+            height: 0 !important;
+            padding: 0;
+            border: none;
+            display: none;
+        }
+        
+        /* Scrollbar styling */
+        #infraction-container, #frame-container {
+            scrollbar-width: thin;
+            scrollbar-color: #bf5700 #f8f9fa;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+        
+        #infraction-container::-webkit-scrollbar,
+        #frame-container::-webkit-scrollbar {
+            height: 6px;
+            visibility: visible;
+            display: block;
+        }
+        
+        #infraction-container::-webkit-scrollbar-track,
+        #frame-container::-webkit-scrollbar-track {
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        #infraction-container::-webkit-scrollbar-thumb,
+        #frame-container::-webkit-scrollbar-thumb {
+            background-color: #bf5700;
+            border-radius: 10px;
+            border: 1px solid #f8f9fa;
+        }
+        
+        /* Image container */
+        .image-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: white;
+            border: 1px solid #dee2e6;
+            overflow: hidden;
+            position: relative;
+            cursor: default;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+            margin: 12px;
+            border-radius: 6px;
+        }
+
+        #main-image {
+            width: auto;
+            height: 100%;
+            object-fit: contain;
+            transition: transform 0.25s;
+            transform-origin: center center;
+            max-width: none;
+            opacity: 1;
+        }
+        
+        #main-image.loading {
+            opacity: 0.5;
+        }
+        
+        /* Thumbnail styling */
+        .infraction-item-top img, 
+        .frame-item-bottom img,
+        .mini-map-img,
+        #main-image {
+            -webkit-user-drag: none;
+            user-select: none;
+            pointer-events: auto;
+            -webkit-touch-callout: none;
+            transition: all 0.2s ease;
+        }
+        
+        .infraction-item-top img:hover, 
+        .frame-item-bottom img:hover {
+            transform: scale(1.05);
+            border: 2px solid #bf5700;
+            box-shadow: 0 0 10px rgba(191, 87, 0, 0.4);
+            z-index: 10;
+            position: relative;
+        }
+
+        /* Selected styles */
+        .selected-infraction {
+            border: 3px solid #4a4a4a !important;
+            box-shadow: 0 0 12px rgba(74, 74, 74, 0.5) !important;
+            background: none !important;
+            z-index: 5;
+            animation: pulse 2s infinite;
+        }
+        
+        .selected-frame {
+            border: 3px solid #4a4a4a !important;
+            box-shadow: 0 0 12px rgba(74, 74, 74, 0.5) !important;
+            background: none !important;
+            z-index: 5;
+            animation: pulse 2s infinite;
+        }
+        
+        .inf-frame-img {
+            border: 3px solid #cc0000 !important;
+            box-shadow: 0 0 10px rgba(204, 0, 0, 0.5) !important;
+            background: none !important;
+            z-index: 5;
+        }
+
+        /* Define pulse animation */
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+            }
+            50% {
+                box-shadow: 0 0 12px rgba(0, 0, 0, 0.4);
+            }
+            100% {
+                box-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+            }
+        }
+
+        /* Dragging state visual feedback */
+        .image-container.dragging {
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.2);
+        }
+        
+        /* Boundary collision feedback effect */
+        @keyframes boundaryHit {
+            0% { box-shadow: inset 0 0 10px rgba(0,0,0,0.1); }
+            50% { box-shadow: inset 0 0 15px rgba(255,102,0,0.2); }
+            100% { box-shadow: inset 0 0 10px rgba(0,0,0,0.1); }
+        }
+        
+        .image-container.boundary-hit {
+            animation: boundaryHit 0.3s ease-out;
+        }
+        
+        /* Boundary warning */
+        .boundary-warning {
+            position: absolute;
+            background-color: rgba(191, 87, 0, 0.4);
+            pointer-events: none;
+            z-index: 50;
+            opacity: 0;
+            transition: opacity 0.25s;
+            box-shadow: 0 0 10px rgba(191, 87, 0, 0.4);
+            border-radius: 2px;
+        }
+        
+        .boundary-warning.top { height: 6px; top: 0; left: 0; right: 0; }
+        .boundary-warning.bottom { height: 6px; bottom: 0; left: 0; right: 0; }
+        .boundary-warning.left { width: 6px; top: 0; left: 0; bottom: 0; }
+        .boundary-warning.right { width: 6px; top: 0; right: 0; bottom: 0; }
+        
+        /* Control badge styles */
+        .control-badge {
+            padding: 8px 12px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            color: #333;
+            background: rgba(255, 255, 255, 0.95);
+            border-left: 2px solid transparent;
+            transition: all 0.2s;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .control-badge:last-child {
+            border-bottom: none;
+        }
+        
+        .control-badge:hover {
+            background: rgba(0,0,0,0.02);
+            border-left: 2px solid #bf5700;
+        }
+        
+        .control-badge i {
+            margin-right: 10px;
+            min-width: 16px;
+            text-align: center;
+            color: #495057;
+        }
+        
+        /* Zoom indicator - semi-transparent styling */
+        .zoom-indicator {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(74, 74, 74, 0.7);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: 500;
+            z-index: 100;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            transition: opacity 0.3s, transform 0.3s;
+            transform: translateY(0);
+        }
+        
+        .zoom-indicator.hiding {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        
+        /* Mini map positioning */
+        .mini-map-container {
+            position: absolute;
+            top: 16px;
+            left: 16px; 
+            width: 120px;
+            height: 80px;
+            background-color: white;
+            border: 2px solid #bf5700;
+            border-radius: 6px;
+            overflow: hidden;
+            z-index: 101;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.25);
+            display: none; /* Hidden by default, only shown when zoomed */
+            transition: all 0.3s ease;
+            opacity: 0.9;
+        }
+        
+        .mini-map-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .mini-map-viewport {
+            position: absolute;
+            border: 2px solid #ff6600;
+            background-color: rgba(255, 102, 0, 0.1);
+            z-index: 102;
+            pointer-events: none;
+        }
+        
+        .mini-map-close {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 18px;
+            height: 18px;
+            background-color: rgba(191, 87, 0, 0.85);
+            color: white;
+            font-size: 12px;
+            line-height: 16px;
+            text-align: center;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 103;
+            transition: background-color 0.2s;
+        }
+        
+        .mini-map-close:hover {
+            background-color: rgba(217, 98, 0, 0.95);
+        }
+        
+        /* Thumbnail containers and badges  */
+        #infraction-container {
+            display: flex;
+            position: relative;
+            gap: 10px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            justify-content: flex-start;
+            background-color: white;
+            padding: 12px;
+            border-bottom: 1px solid #dee2e6;
+            height: 120px;
+            transition: height 0.3s ease;
+        }
+        
+        /* Thumbnail selection improvement */
+        .infraction-item-top {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            margin: 0 5px;
+            min-width: 100px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .infraction-item-top img {
+            width: 80px;
+            height: 70px;
+            object-fit: contain;
+            border: 2px solid transparent;
+            transition: all 0.25s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+        }
+        
+        .infraction-item-top div {
+            margin-top: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #495057;
+        }
+        
+        /* Badge position  */
+        .badge-ut {
+            position: absolute;
+            top: -8px;
+            left: -8px;
+            background-color: #bf5700; 
+            color: white;
+            font-size: 11px;
+            font-weight: 500;
+            padding: 3px 6px;
+            border-radius: 4px;
+            display: inline-block;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+        
+        /* Frame control styles */
+        #bottom-panel-content {
+            display: flex;
+            flex-direction: column;
+            height: 140px;
+            transition: height 0.3s ease;
+            background-color: white;
+        }
+        
+        #frame-container {
+            display: flex;
+            position: relative;
+            overflow-x: auto;
+            overflow-y: hidden;
+            justify-content: flex-start;
+            gap: 10px;
+            background-color: white;
+            padding: 12px;
+            height: 120px;
+            transition: height 0.3s ease;
+        }
+        
+        .frame-item-bottom {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            margin: 0 5px;
+            min-width: 100px;
+        }
+        
+        .frame-item-bottom img {
+            width: 80px;
+            height: 70px;
+            object-fit: contain;
+            border: 2px solid transparent;
+            transition: all 0.25s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+        }
+        
+        .frame-item-bottom div {
+            margin-top: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #495057;
+        }
+        
+        /* Side panel */
+        .side-panel {
+            position: fixed;
+            right: 16px;
+            top: 226px; /* Start from below the thumbnail section */
+            width: 240px; /* Reduced width */
+            min-height: 250px; /* Further reduced height */
+            max-height: calc(100vh - 450px); /* Much shorter to avoid covering zoom area */
+            background-color: white;
+            box-shadow: 0 3px 20px rgba(0,0,0,0.15);
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            border-radius: 8px;
+            border: 1px solid rgba(191, 87, 0, 0.2);
+            overflow: hidden;
+            transition: all 0.3s ease;
+            transform: translateX(0);
+        }
+
+        /* Side panel collapsed state */
+        .side-panel.collapsed {
+            transform: translateX(280px);
+            opacity: 0;
+        }
+
+        /* Panel title bar styles */
+        .side-panel-header {
+            padding: 14px 16px;
+            background: linear-gradient(to right, #bf5700, #d96200);
+            color: white;
+            font-weight: 600;
+            display: flex;
+            justify-content: center; /* Center the title */
+            align-items: center;
+            font-size: 16px;
+            cursor: default;
+            position: relative; /* For positioning the toggle button */
+        }
+
+        /* Content area styles - Reduced font size */
+        .side-panel-content {
+            padding: 12px 15px;
+            overflow-y: auto;
+            font-size: 13px; /* Reduced font size */
+            height: auto;
+            flex: 1;
+        }
+
+        /* Collapse/expand button and close button */
+        .side-panel-toggle {
+            width: 20px;
+            height: 20px;
+            background-color: transparent;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            line-height: 18px;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+            position: absolute;
+            left: 15px;
+        }
+        
+        .side-panel-toggle:hover {
+            background-color: rgba(255,255,255,0.15);
+        }
+        
+        /* Metadata styling - more compact font sizes */
+        .metadata-group {
+            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+            padding-bottom: 10px;
+        }
+        
+        .metadata-group:last-child {
+            margin-bottom: 0;
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .metadata-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #bf5700;
+            font-size: 15px; /* Reduced size */
+            letter-spacing: 0.3px;
+        }
+
+        .metadata-item {
+            display: flex;
+            margin-bottom: 6px; /* Reduced spacing */
+            line-height: 1.3;
+        }
+
+        .metadata-label {
+            width: 90px; 
+            font-weight: 500;
+            color: #495057;
+            font-size: 13px; /* Reduced size */
+        }
+
+        .metadata-value {
+            flex: 1;
+            color: #212529;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            font-size: 13px; /* Reduced size */
+        }
+
+        /* Infraction highlight */
+        .infraction-yes {
+            font-weight: 600;
+            color: #cc0000;
+        }
+
+        /* Action button styles - refined */
+        .side-panel .btn {
+            margin-bottom: 10px;
+            width: 100%;
+            justify-content: center;
+            font-weight: 500;
+            transition: all 0.25s ease;
+            letter-spacing: 0.3px;
+        }
+        
+        .side-panel .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        /* Expand button styles */
+        .expand-button {
+            position: fixed;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 30px;
+            height: 30px;
+            background-color: rgba(191, 87, 0, 0.7);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 999;
+            font-size: 16px;
+            font-weight: 600;
+            display: none;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+            transition: all 0.25s ease;
+        }
+        
+        .expand-button:hover {
+            background-color: rgba(217, 98, 0, 0.9);
+            transform: translateY(-50%) scale(1.1);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+        }
+
+        .expand-button.visible {
+            display: flex;
+        }
+        
+        /* Loading indicator - refined */
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        
+        .loading-overlay.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(191, 87, 0, 0.2);
+            border-radius: 50%;
+            border-top-color: #bf5700;
+            animation: spin 0.8s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Fullscreen mode styles - refined with panel adjustments */
+        .fullscreen-mode .page-title {
+            height: 40px;
+            line-height: 20px;
+            font-size: 1.2rem;
+            padding: 10px 20px;
+        }
+        
+        .fullscreen-mode .image-container {
+            flex: 1;
+            height: calc(100vh - 40px);
+            margin: 0;
+            border-radius: 0;
+        }
+        
+        /* Position side panel more consistently in fullscreen mode */
+        .fullscreen-mode .side-panel {
+            opacity: 0.95;
+            max-height: calc(100vh - 100px);
+            top: 226px; /* Keep consistent with non-fullscreen mode */
+        }
+        
+        /* Keyboard shortcuts panel - improved with scrolling */
+        .shortcuts-dropdown {
+            position: absolute; 
+            bottom: 40px; 
+            left: 10px;
+            width: 220px; 
+            background: rgba(255, 255, 255, 0.85); /* More transparent */
+            border-radius: 4px; 
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15); 
+            z-index: 999; 
+            overflow: hidden;
+            max-height: 250px; /* Shorter height */
+            overflow-y: auto; /* Enable scrolling */
+        }
+        
+        .shortcuts-grid {
+            display: flex;
+            flex-direction: column;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        
+        /* Responsive design - refined */
+        @media (max-width: 768px) {
+            .page-title {
+                font-size: 1.2rem;
+                height: 45px;
+                line-height: 25px;
+            }
+            
+            .infraction-item-top img, 
+            .frame-item-bottom img {
+                width: 65px;
+                height: 60px;
+            }
+            
+            .infraction-item-top, 
+            .frame-item-bottom {
+                min-width: 80px;
+            }
+            
+            .side-panel {
+                width: 260px;
+                right: 10px;
+            }
+            
+            /* Slightly smaller font for mobile */
+            .metadata-label, .metadata-value {
+                font-size: 13px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .page-title {
+                font-size: 1rem;
+                height: 40px;
+                line-height: 20px;
+            }
+            
+            .action-button {
+                padding: 4px 8px;
+                font-size: 12px;
+            }
+            
+            #infraction-container,
+            #bottom-panel-content {
+                height: 100px;
+            }
+            
+            #frame-container {
+                height: 90px;
+            }
+            
+            .side-panel {
+                width: calc(100% - 20px);
+                right: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container-fluid">
+    <div class="page-title">Image Infraction Viewer
+        <button id="toggle-fullscreen" class="action-button"><i class="fas fa-expand"></i> Fullscreen</button>
+        <button id="reset-zoom-btn" class="action-button"><i class="fas fa-sync-alt"></i> Reset Zoom</button>
+    </div>
+    
+    <!-- Top panel -->
+    <div class="panel-header" id="top-panel-header">
+        <div class="panel-title">Image Thumbnails</div>
+        <div class="panel-arrow">▼</div>
+    </div>
+    <div class="panel-content" id="infraction-container">
+        <!-- Content will be dynamically added via JavaScript -->
+    </div>
+    
+    <!-- Main image container -->
+    <div class="image-container">
+        <img id="main-image" src="" class="img-fluid">
+        <div class="zoom-indicator" style="display:none;">Zoom: 100%</div>
+        
+        <!-- Loading overlay -->
+        <div class="loading-overlay">
+            <div class="spinner"></div>
+        </div>
+        
+        <!-- Mini map when zoomed -->
+        <div class="mini-map-container">
+            <img class="mini-map-img" src="">
+            <div class="mini-map-viewport"></div>
+            <div class="mini-map-close">×</div>
+        </div>
+        
+        <!-- Keyboard shortcuts button -->
+        <div class="keyboard-shortcuts-btn" style="position: absolute; bottom: 10px; left: 10px; background: rgba(74, 74, 74, 0.7); color: white; padding: 5px 12px; border-radius: 4px; font-size: 12px; font-weight: 500; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.2); cursor: pointer;">
+            <i class="fas fa-keyboard"></i> Keyboard Shortcuts
+        </div>
+        
+        <div class="boundary-warning top"></div>
+        <div class="boundary-warning right"></div>
+        <div class="boundary-warning bottom"></div>
+        <div class="boundary-warning left"></div>
+    </div>
+    
+    <!-- Bottom panel -->
+    <div class="panel-header" id="bottom-panel-header">
+        <div class="panel-title">Frame Controls</div>
+        <div class="panel-arrow">▼</div>
+    </div>
+    <div class="panel-content" id="bottom-panel-content">
+        <div id="frame-container">
+            <!-- Content will be dynamically added via JavaScript -->
+        </div>
+    </div>
+    
+    <!-- Improved Metadata Side Panel with responsive design -->
+    <div class="side-panel">
+        <div class="side-panel-header">
+            <div class="side-panel-toggle">−</div>
+            <span class="panel-title-text" style="font-family: Arial, sans-serif; letter-spacing: 0.5px;">Infraction Details</span>
+        </div>
+        <div class="side-panel-content" id="metadata-content">
+            <!-- Metadata content will be dynamically populated -->
+        </div>
+    </div>
+    
+    <!-- Add expand button (initially hidden) -->
+    <div class="expand-button">+</div>
+</div>
+
+<script>
+    // Global variables
+    let selectedInfraction = null;
+    let selectedFrame = 0;
+    let imageSequences = {};
+    let baseURL = "http://127.0.0.1:5000";
+    let zoomLevel = 1;
+    let isDragging = false;
+    let startX = 0;
+    let startY = 0;
+    let translateX = 0;
+    let translateY = 0;
+    let containerWidth = 0;
+    let containerHeight = 0;
+    let imageWidth = 0;
+    let imageHeight = 0;
+    let dragInertia = 0.1; // Drag inertia coefficient
+    let userPreferences = loadUserPreferences();
+    
+    // Helper function: Update container dimensions
+    function updateContainerDimensions() {
+        containerWidth = $(".image-container").width();
+        containerHeight = $(".image-container").height();
+    }
+    
+    // Initialization
+    $(document).ready(function () {
+        // Get initial data
+        fetchInfractions();
+        
+        // Initialize container dimensions
+        updateContainerDimensions();
+        
+        // Set up event listeners
+        setupEventListeners();
+        
+        // Initialize panel folding system
+        initPanels();
+        
+        // Initialize mini map preferences
+        window.miniMapEnabled = userPreferences.miniMapEnabled ?? true;
+        
+        // Initialize side panel
+        initSidePanel();
+        
+        // Apply any saved user preferences
+        applyUserPreferences();
+        
+        // Global prevent image dragging
+        $(document).on("dragstart", "img", function(e) {
+            e.preventDefault();
+            return false;
+        });
+        
+        // Check for WebP support
+        checkWebPSupport();
+        
+        // Set initial panel position
+        setTimeout(adjustSidePanelHeight, 500);
+        
+        // Add window resize event for responsive behavior
+        $(window).on('resize', debounce(function() {
+            updateContainerDimensions();
+            adjustSidePanelHeight();
+            applyBoundaryConstraints(true);
+        }, 200));
+    });
+    
+    // We're not using WebP conversion to fix image loading issues
+    function checkWebPSupport() {
+        // Always set to false to ensure we use original image formats
+        window.webpSupported = false;
+        console.log("Using original image formats for maximum compatibility");
+    }
+    
+    // Set up event listeners
+    function setupEventListeners() {
+        // Listen for window resize
+        $(window).resize(function() {
+            updateContainerDimensions();
+            applyBoundaryConstraints(true);
+        });
+        
+        // Double-click image container to toggle fullscreen mode
+        $(".image-container").dblclick(toggleFullscreenMode);
+        
+        // Toggle fullscreen button event
+        $("#toggle-fullscreen").click(toggleFullscreenMode);
+        
+        // ESC key to exit fullscreen
+        $(document).keydown(function(e) {
+            if (e.key === "Escape" && $(".container-fluid").hasClass("fullscreen-mode")) {
+                toggleFullscreenMode();
+            }
+        });
+        
+        // Close mini map temporarily - will reappear on next frame change
+        $(".mini-map-close").on("click", function(e) {
+            e.stopPropagation();
+            $(".mini-map-container").hide();
+            // Do NOT change window.miniMapEnabled here
+            // This is just a temporary hide
+        });
+        
+        // Control panel toggle - Improved keyboard shortcuts panel
+        $(".keyboard-shortcuts-btn").click(function() {
+            // Create shortcut content container if it doesn't exist
+            if ($(".shortcuts-dropdown").length === 0) {
+                // Create the dropdown content with improved layout and scrolling
+                const shortcutsContent = $(`
+                    <div class="shortcuts-dropdown">
+                        <div class="shortcuts-grid">
+                            <div class="control-badge"><i class="fas fa-mouse-pointer"></i> Double-click: Fullscreen</div>
+                            <div class="control-badge"><i class="fas fa-arrows-alt"></i> Drag: Move when zoomed</div>
+                            <div class="control-badge"><i class="fas fa-search-plus"></i> Scroll: Zoom in/out</div>
+                            <div class="control-badge"><i class="fas fa-arrow-left"></i> ←: Previous frame</div>
+                            <div class="control-badge"><i class="fas fa-arrow-right"></i> →: Next frame</div>
+                            <div class="control-badge"><i class="fas fa-arrow-up"></i> ↑: Zoom in</div>
+                            <div class="control-badge"><i class="fas fa-arrow-down"></i> ↓: Zoom out</div>
+                            <div class="control-badge"><i class="fas fa-redo"></i> R: Reset zoom</div>
+                            <div class="control-badge"><i class="fas fa-expand"></i> F: Toggle fullscreen</div>
+                            <div class="control-badge"><i class="fas fa-info-circle"></i> I: Toggle panel</div>
+                        </div>
+                    </div>
+                `);
+                
+                // Add to the DOM
+                $(".image-container").append(shortcutsContent);
+                
+                // Handle clicks outside the shortcuts panel
+                $(document).on("click.shortcuts", function(e) {
+                    if (!$(e.target).closest(".keyboard-shortcuts-btn, .shortcuts-dropdown").length) {
+                        $(".shortcuts-dropdown").remove();
+                        $(document).off("click.shortcuts");
+                    }
+                });
+                
+                // Prevent clicks inside dropdown from closing it
+                $(".shortcuts-dropdown").on("click", function(e) {
+                    e.stopPropagation();
+                });
+            } else {
+                // Remove if already exists
+                $(".shortcuts-dropdown").remove();
+                $(document).off("click.shortcuts");
+            }
+        });
+        
+        // Mouse drag events - only enable when zoomed
+        setupMouseDragEvents();
+        
+        // Touch events
+        setupTouchEvents();
+        
+        // Mouse wheel zoom
+        setupZoomEvents();
+        
+        // Keyboard navigation
+        setupKeyboardNavigation();
+        
+        // Reset zoom button
+        $("#reset-zoom-btn").click(resetZoom);
+    }
+    
+    // Initialize side panel
+    function initSidePanel() {
+        // Set collapse/expand button events - Modified to use the - button only
+        $('.side-panel-toggle').on('click', function() {
+            togglePanel();
+        });
+        
+        // Set expand button events
+        $('.expand-button').on('click', function() {
+            expandPanel();
+        });
+        
+        // Initialize toggle state tracking to ensure proper toggling
+        window.panelCollapsed = false;
+        
+        // Keyboard shortcuts - ensure i key properly toggles
+        $(document).keydown(function(e) {
+            if (e.key === "i" || e.key === "I") {
+                // Direct toggle call - this should work properly
+                togglePanel();
+                e.preventDefault(); // Prevent any default browser actions
+            }
+        });
+        
+        // Adjust side panel position based on window size
+        adjustSidePanelHeight();
+        $(window).resize(function() {
+            adjustSidePanelHeight();
+        });
+    }
+
+    // Toggle panel display/hide with animation - fixed to properly toggle
+    function togglePanel() {
+        const panel = document.querySelector('.side-panel');
+        const expandButton = document.querySelector('.expand-button');
+        
+        // Ensure proper toggling
+        if (panel.classList.contains('collapsed')) {
+            expandPanel();
+        } else {
+            collapsePanel();
+        }
+    }
+
+    // Collapse panel with animation
+    function collapsePanel() {
+        const panel = document.querySelector('.side-panel');
+        const expandButton = document.querySelector('.expand-button');
+        
+        panel.classList.add('collapsed');
+        
+        // Show expand button after panel animation completes
+        setTimeout(() => {
+            expandButton.classList.add('visible');
+        }, 300);
+    }
+
+    // Expand panel with animation
+    function expandPanel() {
+        const panel = document.querySelector('.side-panel');
+        const expandButton = document.querySelector('.expand-button');
+        
+        expandButton.classList.remove('visible');
+        
+        // Small delay before showing panel for better animation feel
+        setTimeout(() => {
+            panel.classList.remove('collapsed');
+        }, 50);
+    }
+    
+    // Function to adjust side panel height based on viewport and positioning
+    function adjustSidePanelHeight() {
+        const sidePanel = $(".side-panel");
+        const windowHeight = $(window).height();
+        const imageContainer = $(".image-container");
+        const imageBottom = imageContainer.offset().top + imageContainer.height();
+        const panelTop = sidePanel.offset().top;
+        
+        // Calculate the maximum height to stay within the image container
+        // Reduced buffer to make panel taller and closer to the zoom indicator
+        const maxHeight = imageBottom - panelTop - 50; 
+        
+        // Apply max height with a minimum to ensure usability
+        sidePanel.css("max-height", Math.max(280, Math.min(maxHeight, 480)) + "px");
+        
+        // Also resize the content area to fit
+        const headerHeight = $(".side-panel-header").outerHeight();
+        $(".side-panel-content").css("max-height", (Math.max(280, Math.min(maxHeight, 480)) - headerHeight) + "px");
+    }
+    
+    // Load user preferences from localStorage
+    function loadUserPreferences() {
+        try {
+            const savedPrefs = localStorage.getItem('infraViewerPrefs');
+            return savedPrefs ? JSON.parse(savedPrefs) : {};
+        } catch (e) {
+            console.error("Error loading preferences:", e);
+            return {};
+        }
+    }
+    
+    // Save user preference
+    function saveUserPreference(key, value) {
+        try {
+            userPreferences[key] = value;
+            localStorage.setItem('infraViewerPrefs', JSON.stringify(userPreferences));
+        } catch (e) {
+            console.error("Error saving preference:", e);
+        }
+    }
+    
+    // Save selected state to localStorage
+    function saveCurrentState() {
+        if (!selectedInfraction) return;
+        
+        try {
+            const state = {
+                athlete: selectedInfraction.athlete,
+                infraction: selectedInfraction.infraction,
+                frame: selectedFrame
+            };
+            localStorage.setItem('infraViewerState', JSON.stringify(state));
+        } catch (e) {
+            console.error("Error saving state:", e);
+        }
+    }
+    
+    // Load selected state from localStorage
+    function loadSavedState() {
+        try {
+            const savedState = localStorage.getItem('infraViewerState');
+            if (savedState) {
+                const state = JSON.parse(savedState);
+                if (imageSequences[state.athlete] && 
+                    imageSequences[state.athlete][state.infraction]) {
+                    selectInfraction(state.athlete, state.infraction);
+                    selectFrame(state.frame);
+                    return true;
+                }
+            }
+        } catch (e) {
+            console.error("Error loading state:", e);
+        }
+        return false;
+    }
+    
+    // Apply user preferences including responsive behavior
+    function applyUserPreferences() {
+        // Apply mini map preference
+        window.miniMapEnabled = userPreferences.miniMapEnabled ?? true;
+        
+        // Apply control badges collapsed state
+        if (userPreferences.controlBadgesCollapsed) {
+            $(".control-badges").addClass("collapsed");
+            $(".control-arrow").removeClass("down");
+        }
+        
+        // Make sure the side panel is visible by default unless in fullscreen
+        if ($(".container-fluid").hasClass("fullscreen-mode")) {
+            collapsePanel();
+        } else {
+            expandPanel();
+        }
+        
+        // Ensure main image has correct cursor based on zoom level
+        $("#main-image").css({
+            "cursor": zoomLevel > 1 ? "grab" : "default"
+        });
+        
+        // Apply responsive sizing for side panel
+        adjustSidePanelHeight();
+        
+        // Add window resize event for responsive behavior
+        $(window).on('resize', debounce(function() {
+            adjustSidePanelHeight();
+        }, 200));
+    }
+    
+    // Initialize panels
+    function initPanels() {
+        // Store panel original heights
+        $("#infraction-container").data("originalHeight", 120);
+        $("#bottom-panel-content").data("originalHeight", 140);
+        
+        // Set initial state (expanded)
+        updatePanelState($("#infraction-container"), $("#top-panel-header"), true);
+        updatePanelState($("#bottom-panel-content"), $("#bottom-panel-header"), true);
+        
+        // Direct event binding
+        document.getElementById("top-panel-header").onclick = function() {
+            const panel = $("#infraction-container");
+            const header = $("#top-panel-header");
+            const isCollapsed = panel.hasClass("collapsed");
+            updatePanelState(panel, header, isCollapsed);
+        };
+        
+        document.getElementById("bottom-panel-header").onclick = function() {
+            const panel = $("#bottom-panel-content");
+            const header = $("#bottom-panel-header");
+            const isCollapsed = panel.hasClass("collapsed");
+            updatePanelState(panel, header, isCollapsed);
+        };
+    }
+    
+    // Update panel state with smooth animation
+    function updatePanelState($panel, $header, shouldExpand) {
+        const originalHeight = $panel.data("originalHeight");
+        
+        if (shouldExpand) {
+            // Expand panel
+            $panel.removeClass("collapsed");
+            $panel.css({
+                "height": "0px",
+                "display": "flex"
+            });
+            
+            // Use setTimeout to trigger animation
+            setTimeout(() => {
+                $panel.css("height", originalHeight + "px");
+            }, 10);
+            
+            $header.removeClass("collapsed");
+            $header.find(".panel-arrow").addClass("down");
+            
+            // Update container dimensions after expanding
+            setTimeout(function() {
+                updateContainerDimensions();
+                applyBoundaryConstraints(true);
+            }, 300);
+        } else {
+            // Collapse panel
+            $panel.css("height", "0px");
+            $panel.addClass("collapsed");
+            
+            $header.addClass("collapsed");
+            $header.find(".panel-arrow").removeClass("down");
+            
+            // Hide panel after animation completes
+            setTimeout(() => {
+                $panel.css("display", "none");
+            }, 300);
+            
+            // Update container dimensions after collapsing
+            setTimeout(function() {
+                updateContainerDimensions();
+                applyBoundaryConstraints(true);
+            }, 300);
+        }
+    }
+    
+    /* Toggle fullscreen mode with smooth transitions and auto-hide/collapse keyboard shorcuts */
+    function toggleFullscreenMode() {
+        const $container = $(".container-fluid");
+        $container.toggleClass("fullscreen-mode");
+        
+        if ($container.hasClass("fullscreen-mode")) {
+            $("#toggle-fullscreen").html('<i class="fas fa-compress"></i> Exit');
+            
+            // Collapse panels in fullscreen mode
+            updatePanelState($("#infraction-container"), $("#top-panel-header"), false);
+            updatePanelState($("#bottom-panel-content"), $("#bottom-panel-header"), false);
+            
+            // Auto-hide side panel in fullscreen mode
+            collapsePanel();
+            
+            // Auto-hide keyboard shortcuts in fullscreen mode
+            $(".shortcuts-dropdown").remove();
+            $(document).off("click.shortcuts");
+        } else {
+            $("#toggle-fullscreen").html('<i class="fas fa-expand"></i> Fullscreen');
+            
+            // Expand panels when exiting fullscreen
+            updatePanelState($("#infraction-container"), $("#top-panel-header"), true);
+            updatePanelState($("#bottom-panel-content"), $("#bottom-panel-header"), true);
+            
+            // Wait a bit before showing side panel when exiting fullscreen
+            setTimeout(expandPanel, 300);
+        }
+        
+        // Update dimensions after transition
+        setTimeout(function() {
+            updateContainerDimensions();
+            applyBoundaryConstraints(true);
+            adjustSidePanelHeight();
+        }, 350);
+        
+        // Save preference
+        saveUserPreference('fullscreenMode', $container.hasClass("fullscreenMode"));
+    }
+    
+    // Fetch infractions from API
+    function fetchInfractions() {
+        // Show loading indicator
+        showLoading(true);
+        
+        // For debugging purposes, use a try-catch block to handle API errors more gracefully
+        try {
+            $.getJSON(`${baseURL}/api/infractions/local`, function (data) {
+                console.log("Fetched data:", data);
+                imageSequences = data;
+                renderInfractions();
+                
+                // Hide loading indicator
+                showLoading(false);
+                
+                // Try to load saved state
+                if (!loadSavedState() && Object.keys(imageSequences).length > 0) {
+                    // If no saved state, select the first infraction
+                    const athlete = Object.keys(imageSequences)[0];
+                    const infraction = Object.keys(imageSequences[athlete])[0];
+                    selectInfraction(athlete, infraction);
+                }
+            }).fail(function(error) {
+                console.error("Failed to fetch infractions:", error);
+                handleFetchError();
+            });
+        } catch (err) {
+            console.error("Exception in fetchInfractions:", err);
+            handleFetchError();
+        }
+    }
+    
+    // Handle fetch errors more gracefully
+    function handleFetchError() {
+        showLoading(false);
+        
+        // Show error message
+        $(".image-container").append(
+            '<div class="alert alert-danger" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); z-index:100; padding:20px; max-width:80%; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.15);">' +
+            '<h4><i class="fas fa-exclamation-triangle"></i> Image Loading Error</h4>' +
+            '<p>Could not load image data. Possible reasons:</p>' + 
+            '<ul>' +
+            '<li>Server connection issues</li>' +
+            '<li>API endpoint not available</li>' +
+            '<li>Incorrect file paths</li>' +
+            '</ul>' +
+            '<p>Please check your network connection and server status.</p>' +
+            '<button class="btn" style="background-color:#bf5700; color:white;" onclick="location.reload();"><i class="fas fa-sync-alt"></i> Retry</button>' +
+            '</div>'
+        );
+    }
+
+    // Show/hide loading indicator with smooth transitions
+    function showLoading(show) {
+        if (show) {
+            $(".loading-overlay").addClass("visible");
+            $("#main-image").addClass("loading");
+        } else {
+            $(".loading-overlay").removeClass("visible");
+            $("#main-image").removeClass("loading");
+        }
+    }
+
+    // MODIFIED: Render infractions with only infraction-level timestamps
+    function renderInfractions() {
+        // Clear container
+        $("#infraction-container").empty();
+        
+        // Log original data structure for debugging
+        console.log("Original imageSequences data:", JSON.parse(JSON.stringify(imageSequences)));
+        
+        let infractionCounter = 1;
+
+        // Process infractions in the order they come from API
+        Object.keys(imageSequences).forEach((athlete) => {
+            Object.keys(imageSequences[athlete]).forEach((infraction) => {
+                const infraData = imageSequences[athlete][infraction];
+                
+                // Use original image path without WebP conversion
+                let previewImgSrc = infraData.preview;
+                
+                // Get timestamp for display
+                let displayTime = "";
+                
+                // Extract timestamp from infraction's timestamp field only
+                if (infraData.timestamp) {
+                    let timestamp = infraData.timestamp;
+                    // Split date and time
+                    let timeParts = timestamp.split(" ");
+                    if (timeParts.length > 1) {
+                        // Get the time part and remove milliseconds
+                        displayTime = timeParts[1].split(".")[0];
+                    } else {
+                        // If format doesn't match expectations, use original timestamp
+                        displayTime = timestamp;
+                    }
+                } else {
+                    displayTime = "No timestamp";
+                }
+                
+                // Add error handling for image loading
+                let imageErrorHandler = `onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'100\\' height=\\'100\\' viewBox=\\'0 0 100 100\\'%3E%3Crect fill=\\'%23bf5700\\' width=\\'100\\' height=\\'100\\'/%3E%3Ctext fill=\\'white\\' font-family=\\'Arial\\' font-size=\\'14\\' x=\\'50\\' y=\\'50\\' text-anchor=\\'middle\\' dominant-baseline=\\'middle\\'%3EImage Error%3C/text%3E%3C/svg%3E';"`;
+                
+                let infractionItem = $(`
+                    <div class="infraction-item-top">
+                        <span class="badge-ut">#${infractionCounter}</span>
+                        <img src="${previewImgSrc}" class="infraction" 
+                            data-athlete="${athlete}" 
+                            data-infraction="${infraction}"
+                            data-timestamp="${displayTime}"
+                            draggable="false" 
+                            ${imageErrorHandler}
+                            style="border: 2px solid transparent;">
+                        <div>${displayTime}</div>
+                    </div>
+                `);
+
+                // Use lazy loading for images
+                infractionItem.find("img").attr("loading", "lazy");
+                
+                // Add click handler with feedback and logging for debugging
+                infractionItem.find("img").click(function() {
+                    // Log for debugging
+                    console.log(`Clicked image: ${athlete} - ${infraction}`);
+                    console.log(`Timestamp: ${displayTime}`);
+                    
+                    // Visual feedback
+                    $(this).css("transform", "scale(0.95)");
+                    setTimeout(() => {
+                        $(this).css("transform", "scale(1)");
+                        selectInfraction(athlete, infraction);
+                    }, 100);
+                });
+                
+                // Add image load error handling
+                infractionItem.find("img").on("error", function() {
+                    console.error(`Failed to load thumbnail: ${previewImgSrc}`);
+                    $(this).attr("src", "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect fill='%23bf5700' width='100' height='100'/%3E%3Ctext fill='white' font-family='Arial' font-size='14' x='50' y='50' text-anchor='middle' dominant-baseline='middle'%3EImage Error%3C/text%3E%3C/svg%3E");
+                });
+                
+                $("#infraction-container").append(infractionItem);
+                infractionCounter++;
+            });
+        });
+    }
+
+    // Select infraction to view with smooth transitions and automatic panel adjustment
+    function selectInfraction(athlete, infraction) {
+        selectedInfraction = {athlete, infraction};
+        let frames = imageSequences[athlete][infraction].frames;
+        
+        // Find the infraction frame (ends with "0.jpg")
+        const infraFrameIndex = frames.findIndex(frame => frame.endsWith("0.jpg"));
+        // Default to first frame if no infraction frame is found
+        selectedFrame = infraFrameIndex >= 0 ? infraFrameIndex : 0;
+
+        // Clear all selection styles
+        $(".infraction").removeClass("selected-infraction");
+        $(".infraction").css("border", "2px solid transparent");
+        
+        // Apply highlight style with animation
+        const $selectedImg = $(`.infraction[data-athlete="${athlete}"][data-infraction="${infraction}"]`);
+        $selectedImg.addClass("selected-infraction");
+
+        // Update panels
+        updateFrames();
+        updateMainImage();
+        updateMetadataPanel();
+        
+        // Save current state to localStorage
+        saveCurrentState();
+        
+        // Expand panels if collapsed
+        if ($("#infraction-container").hasClass("collapsed")) {
+            updatePanelState($("#infraction-container"), $("#top-panel-header"), true);
+        }
+        if ($("#bottom-panel-content").hasClass("collapsed")) {
+            updatePanelState($("#bottom-panel-content"), $("#bottom-panel-header"), true);
+        }
+        
+        // Make sure side panel is visible but adjust for screen size
+        if (!$(".container-fluid").hasClass("fullscreen-mode")) {
+            expandPanel();
+        }
+        
+        // Update side panel position and size
+        adjustSidePanelHeight();
+    }
+
+    // MODIFIED: Update frames thumbnails showing frame numbers instead of timestamps
+    function updateFrames() {
+        if (!selectedInfraction) return;
+        let {athlete, infraction} = selectedInfraction;
+        
+        // Clear container
+        $("#frame-container").empty();
+
+        // Get the infraction data
+        const infraData = imageSequences[athlete][infraction];
+        
+        // Log frame information for debugging
+        console.log("Frames for", athlete, infraction, ":", infraData.frames);
+
+        // Get the main infraction timestamp display value
+        let mainTimestamp = "";
+        if (infraData.timestamp) {
+            let timeParts = infraData.timestamp.split(" ");
+            if (timeParts.length > 1) {
+                mainTimestamp = timeParts[1].split(".")[0]; // Only show HH:MM:SS
+            } else {
+                mainTimestamp = infraData.timestamp;
+            }
+        }
+
+        // Process frames
+        infraData.frames.forEach((frameSrc, index) => {
+            // Use frame number for display instead of timestamp
+            let displayText = `Frame ${index + 1}`;
+            
+            // Determine if this is an infraction frame
+            const isInfractionFrame = frameSrc.endsWith("0.jpg");
+            let label = isInfractionFrame ? "Inf Frame" : displayText;
+            
+            // Add error handling for image loading
+            let imageErrorHandler = `onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'100\\' height=\\'100\\' viewBox=\\'0 0 100 100\\'%3E%3Crect fill=\\'%23bf5700\\' width=\\'100\\' height=\\'100\\'/%3E%3Ctext fill=\\'white\\' font-family=\\'Arial\\' font-size=\\'14\\' x=\\'50\\' y=\\'50\\' text-anchor=\\'middle\\' dominant-baseline=\\'middle\\'%3EImage Error%3C/text%3E%3C/svg%3E';"`;
+            
+            // Create frame item
+            let frameItem = $(`
+                <div class="frame-item-bottom">
+                    <img src="${frameSrc}" class="frame" 
+                        data-index="${index}" 
+                        data-timestamp="${mainTimestamp}"
+                        draggable="false" 
+                        loading="lazy" ${imageErrorHandler} 
+                        style="border: 2px solid transparent;">
+                    <div>${label}</div>
+                </div>
+            `);
+
+            // Apply special highlights
+            let $img = frameItem.find("img");
+            
+            if (isInfractionFrame) {
+                $img.addClass("inf-frame-img");
+            }
+
+            if (index === selectedFrame) {
+                $img.addClass("selected-frame");
+            }
+
+            // Add image load error handling
+            frameItem.find("img").on("error", function() {
+                console.error(`Failed to load frame: ${frameSrc}`);
+                $(this).attr("src", "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect fill='%23bf5700' width='100' height='100'/%3E%3Ctext fill='white' font-family='Arial' font-size='14' x='50' y='50' text-anchor='middle' dominant-baseline='middle'%3EImage Error%3C/text%3E%3C/svg%3E");
+            });
+
+            // Add click handler with logging for debugging
+            frameItem.find("img").click(function() {
+                console.log(`Clicked frame: ${index}`);
+                
+                // Visual feedback
+                $(this).css("transform", "scale(0.95)");
+                setTimeout(() => {
+                    $(this).css("transform", "scale(1)");
+                    selectFrame(index);
+                }, 100);
+            });
+            
+            $("#frame-container").append(frameItem);
+        });
+    }
+
+    // Select frame
+    function selectFrame(index) {
+        if (!selectedInfraction) return;
+        
+        let {athlete, infraction} = selectedInfraction;
+        let frames = imageSequences[athlete][infraction].frames;
+        
+        // Boundary check
+        if (index < 0) index = 0;
+        if (index >= frames.length) index = frames.length - 1;
+        
+        selectedFrame = index;
+
+        // Reset all frames
+        $(".frame").removeClass("selected-frame");
+        $(".frame").not(".inf-frame-img").css("border", "2px solid transparent");
+        
+        // Apply style to selected frame
+        $(`.frame[data-index="${index}"]`).addClass("selected-frame");
+
+        // Update main image
+        updateMainImage();
+        
+        // Update metadata panel to reflect new frame selection
+        updateMetadataPanel();
+        
+        // Save current state to localStorage
+        saveCurrentState();
+    }
+
+    // Update main image display with smooth transitions
+    function updateMainImage() {
+        if (!selectedInfraction) return;
+        
+        // Show loading indicator
+        showLoading(true);
+        
+        let {athlete, infraction} = selectedInfraction;
+        let imgSrc = imageSequences[athlete][infraction].frames[selectedFrame];
+        
+        // Reset zoom and position
+        resetZoom();
+        
+        // Update image
+        const $mainImage = $("#main-image");
+        
+        // Add error handling for main image
+        const errorHandler = function() {
+            console.error("Failed to load main image:", imgSrc);
+            showLoading(false);
+            
+            // Show error placeholder
+            $(this).attr("src", "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='600' viewBox='0 0 800 600'%3E%3Crect fill='%23f8f9fa' width='800' height='600'/%3E%3Ctext fill='%23bf5700' font-family='Arial' font-size='24' x='400' y='300' text-anchor='middle' dominant-baseline='middle'%3EImage Failed to Load%3C/text%3E%3Ctext fill='%23bf5700' font-family='Arial' font-size='18' x='400' y='340' text-anchor='middle' dominant-baseline='middle'%3EPlease check image path and server connection%3C/text%3E%3C/svg%3E");
+            
+            // Set default dimensions for error state
+            imageWidth = 800;
+            imageHeight = 600;
+            
+            // Use same placeholder for mini map
+            $(".mini-map-img").attr("src", $(this).attr("src"));
+            
+            // Update container dimensions
+            updateContainerDimensions();
+        };
+        
+        // Set image and handle load/error events
+        $mainImage
+            .css("opacity", 0.5) // Start faded for transition
+            .attr("src", imgSrc)
+            .off("load error") // Remove any previous event handlers
+            .on("load", function() {
+                // Fade in animation
+                $(this).animate({opacity: 1}, 200);
+                
+                // Hide loading indicator
+                showLoading(false);
+                
+                // Get image dimensions
+                imageWidth = this.naturalWidth;
+                imageHeight = this.naturalHeight;
+                
+                // Use same image for mini map
+                $(".mini-map-img").attr("src", imgSrc);
+                
+                // Update container dimensions
+                updateContainerDimensions();
+            })
+            .on("error", errorHandler);
+        
+        $mainImage.css({
+            transform: `scale(${zoomLevel}) translate(${translateX}px, ${translateY}px)`,
+            transformOrigin: "center"
+        });
+        
+        // Update zoom indicator
+        updateZoomIndicator();
+        
+        // Show mini map if zoomed and enabled (will be shown by updateZoomIndicator)
+        
+        // Update cursor based on zoom level
+        $mainImage.css("cursor", zoomLevel > 1 ? "grab" : "default");
+    }
+    
+    // MODIFIED: Update metadata panel with only infraction-level timestamp
+    function updateMetadataPanel() {
+        if (!selectedInfraction) return;
+        let {athlete, infraction} = selectedInfraction;
+        
+        const infraData = imageSequences[athlete][infraction];
+        const content = $("#metadata-content");
+        
+        // Clear previous content
+        content.empty();
+        
+        // Get the infraction's timestamp
+        let dateStr = '';
+        let timeStr = '';
+        
+        if (infraData.timestamp) {
+            const timestampParts = infraData.timestamp.split(' ');
+            if (timestampParts.length > 1) {
+                dateStr = timestampParts[0];
+                timeStr = timestampParts[1];
+            } else {
+                timeStr = infraData.timestamp;
+            }
+        }
+        
+        // Try to get lane from path
+        let laneStr = "2"; // Default value
+        
+        // Basic information layout
+        let metadataHTML = `
+            <div class="metadata-group">
+                <div class="metadata-title">Infraction Information</div>
+                <div class="metadata-item">
+                    <div class="metadata-label">Athlete:</div>
+                    <div class="metadata-value">${athlete}</div>
+                </div>
+                <div class="metadata-item">
+                    <div class="metadata-label">Lane:</div>
+                    <div class="metadata-value">Lane ${laneStr}</div>
+                </div>
+                <div class="metadata-item">
+                    <div class="metadata-label">Date:</div>
+                    <div class="metadata-value">${dateStr}</div>
+                </div>
+                <div class="metadata-item">
+                    <div class="metadata-label">Time:</div>
+                    <div class="metadata-value">${timeStr}</div>
+                </div>
+                <div class="metadata-item">
+                    <div class="metadata-label">Frame Count:</div>
+                    <div class="metadata-value">${infraData.frames.length}</div>
+                </div>
+            </div>
+            
+            <div class="metadata-group">
+                <div class="metadata-title">Current Frame</div>
+                <div class="metadata-item">
+                    <div class="metadata-label">Frame Number:</div>
+                    <div class="metadata-value">${selectedFrame + 1} of ${infraData.frames.length}</div>
+                </div>
+                <div class="metadata-item">
+                    <div class="metadata-label">Infraction:</div>
+                    <div class="metadata-value ${infraData.frames[selectedFrame].endsWith("0.jpg") ? 'infraction-yes' : ''}">
+                        ${infraData.frames[selectedFrame].endsWith("0.jpg") ? "Yes" : "No"}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="metadata-group">
+                <div class="metadata-title">Actions</div>
+                <button class="btn btn-secondary mb-2" id="export-image-btn" style="font-size: 12px; padding: 6px 0;">
+                    <i class="fas fa-download"></i> Export Current Frame
+                </button>
+                <button class="btn" id="toggle-mini-map-btn" style="background-color: #8b3f00; color: white; font-size: 12px; padding: 6px 0;">
+                    <i class="fas fa-map"></i> ${window.miniMapEnabled ? "Disable" : "Enable"} Mini Map
+                </button>
+            </div>`;
+        
+        // Add to content area
+        content.html(metadataHTML);
+        
+        // Set button events
+        $("#export-image-btn").on("click", function() {
+            exportCurrentFrame();
+        });
+        
+        $("#toggle-mini-map-btn").on("click", function() {
+            window.miniMapEnabled = !window.miniMapEnabled;
+            saveUserPreference('miniMapEnabled', window.miniMapEnabled);
+            
+            $(this).html(`<i class="fas fa-map"></i> ${window.miniMapEnabled ? "Disable" : "Enable"} Mini Map`);
+            
+            if (zoomLevel > 1 && window.miniMapEnabled) {
+                $(".mini-map-container").show();
+                updateMiniMap();
+            } else {
+                $(".mini-map-container").hide();
+            }
+        });
+    }
+    
+    // Export current frame with improved feedback
+    function exportCurrentFrame() {
+        if (!selectedInfraction) return;
+        
+        const {athlete, infraction} = selectedInfraction;
+        const frameSrc = imageSequences[athlete][infraction].frames[selectedFrame];
+        
+        // Add visual feedback
+        $("#export-image-btn").html('<i class="fas fa-circle-notch fa-spin"></i> Exporting...');
+        $("#export-image-btn").prop('disabled', true);
+        
+        // Reset button after delay
+        setTimeout(() => {
+            $("#export-image-btn").html('<i class="fas fa-download"></i> Export Current Frame');
+            $("#export-image-btn").prop('disabled', false);
+            
+            // Create a link element
+            const link = document.createElement('a');
+            link.href = frameSrc;
+            link.download = `infraction_${athlete}_frame_${selectedFrame + 1}.jpg`;
+            
+            // Simulate click to trigger download
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }, 500);
+    }
+    
+    // Reset zoom and position with smooth animation
+    function resetZoom() {
+        zoomLevel = 1;
+        translateX = 0;
+        translateY = 0;
+        
+        $("#main-image").css({
+            transform: `scale(${zoomLevel}) translate(${translateX}px, ${translateY}px)`,
+            transformOrigin: "center",
+            cursor: "default" // Reset cursor to default when zoom is 1
+        });
+        
+        updateZoomIndicator();
+        $(".boundary-warning").css("opacity", 0);
+        $(".mini-map-container").hide();
+    }
+
+    // Update zoom indicator display and minimap
+    function updateZoomIndicator() {
+        const $indicator = $(".zoom-indicator");
+        $indicator.removeClass("hiding").text(`Zoom: ${Math.round(zoomLevel * 100)}%`).fadeIn();
+        
+        // Show mini map based on zoom level and global preference
+        if (zoomLevel > 1 && window.miniMapEnabled) {
+            $(".mini-map-container").fadeIn(200);
+            updateMiniMap();
+        } else {
+            $(".mini-map-container").fadeOut(200);
+        }
+        
+        // Update cursor based on zoom level
+        $("#main-image").css("cursor", zoomLevel > 1 ? "grab" : "default");
+        
+        // Hide zoom indicator after 3 seconds with animation
+        clearTimeout(window.zoomTimeout);
+        window.zoomTimeout = setTimeout(() => {
+            $indicator.addClass("hiding");
+        }, 3000);
+    }
+    
+    // Update mini map viewport indicator with improved visuals
+    function updateMiniMap() {
+        if (zoomLevel <= 1) return;
+        
+        const mapContainer = $(".mini-map-container");
+        const mapImg = $(".mini-map-img");
+        const mapWidth = mapContainer.width();
+        const mapHeight = mapContainer.height();
+        const viewportRect = $(".mini-map-viewport");
+        
+        // Calculate visible portion of the image in main view
+        const visibleWidth = containerWidth / zoomLevel;
+        const visibleHeight = containerHeight / zoomLevel;
+        
+        // Calculate ratio between mini map and actual image
+        const horizontalRatio = mapWidth / imageWidth;
+        const verticalRatio = mapHeight / imageHeight;
+        
+        // Calculate viewport rectangle size
+        const vpWidth = visibleWidth * horizontalRatio;
+        const vpHeight = visibleHeight * verticalRatio;
+        
+        // Calculate viewport position
+        // Adjust based on zoom and pan
+        const imageCenter = {
+            x: imageWidth / 2,
+            y: imageHeight / 2
+        };
+        
+        const viewPosition = {
+            x: imageCenter.x - translateX,
+            y: imageCenter.y - translateY
+        };
+        
+        // Convert to mini map coordinates
+        const vpLeft = (viewPosition.x - visibleWidth / 2) * horizontalRatio;
+        const vpTop = (viewPosition.y - visibleHeight / 2) * verticalRatio;
+        
+        // Update viewport element position and size
+        viewportRect.css({
+            left: Math.max(0, Math.min(mapWidth - vpWidth, vpLeft)) + 'px',
+            top: Math.max(0, Math.min(mapHeight - vpHeight, vpTop)) + 'px',
+            width: vpWidth + 'px',
+            height: vpHeight + 'px'
+        });
+    }
+    
+    // Mouse drag events - only enable when zoomed with improved feedback
+    function setupMouseDragEvents() {
+        // Mouse down to start dragging - only when zoomed
+        $(".image-container").on("mousedown", function(event) {
+            if (event.button !== 0) return; // Only respond to left button
+            
+            // Only enable dragging when zoomed
+            if (zoomLevel > 1 && $(event.target).is("#main-image")) {
+                isDragging = true;
+                startX = event.clientX - translateX;
+                startY = event.clientY - translateY;
+                $("#main-image").css("cursor", "grabbing");
+                $(".image-container").addClass("dragging");
+                event.preventDefault();
+            }
+        });
+        
+        // Mouse move for dragging with smoother motion
+        $(document).on("mousemove", function(event) {
+            if (!isDragging) return;
+            
+            // Calculate new position and apply inertia
+            const newTranslateX = event.clientX - startX;
+            const newTranslateY = event.clientY - startY;
+            
+            translateX += (newTranslateX - translateX) * (1 - dragInertia);
+            translateY += (newTranslateY - translateY) * (1 - dragInertia);
+            
+            applyBoundaryConstraints(false);
+            updateMiniMap();
+        });
+        
+        // Mouse up to stop dragging with smooth transition
+        $(document).on("mouseup", function() {
+            if (isDragging) {
+                isDragging = false;
+                $("#main-image").css("cursor", "grab");
+                $(".image-container").removeClass("dragging");
+                applyBoundaryConstraints(true);
+            }
+        });
+    }
+    
+    // Touch events with improved handling
+    function setupTouchEvents() {
+        // Track touch points for pinch-to-zoom
+        let lastTouchDistance = 0;
+        let lastTouchCenter = { x: 0, y: 0 };
+        
+        // Touch start
+        $(".image-container").on("touchstart", function(event) {
+            if (event.touches.length === 1) {
+                // Single touch for dragging - only when zoomed
+                if (zoomLevel > 1) {
+                    isDragging = true;
+                    const touch = event.touches[0];
+                    startX = touch.clientX - translateX;
+                    startY = touch.clientY - translateY;
+                    $(".image-container").addClass("dragging");
+                    event.preventDefault();
+                }
+            } else if (event.touches.length === 2) {
+                // Two touches for pinch zoom
+                const touch1 = event.touches[0];
+                const touch2 = event.touches[1];
+                
+                // Calculate initial distance and center point
+                lastTouchDistance = Math.hypot(
+                    touch2.clientX - touch1.clientX,
+                    touch2.clientY - touch1.clientY
+                );
+                
+                lastTouchCenter = {
+                    x: (touch1.clientX + touch2.clientX) / 2,
+                    y: (touch1.clientY + touch2.clientY) / 2
+                };
+                
+                // Store initial values
+                $(this).data('initialPinchDistance', lastTouchDistance);
+                $(this).data('initialZoomLevel', zoomLevel);
+                
+                isDragging = false;
+                event.preventDefault();
+            }
+        });
+        
+        // Touch move with smoother handling
+        $(".image-container").on("touchmove", function(event) {
+            if (event.touches.length === 1 && isDragging) {
+                // Single touch drag
+                const touch = event.touches[0];
+                
+                // Calculate new position and apply inertia
+                const newTranslateX = touch.clientX - startX;
+                const newTranslateY = touch.clientY - startY;
+                
+                translateX += (newTranslateX - translateX) * (1 - dragInertia);
+                translateY += (newTranslateY - translateY) * (1 - dragInertia);
+                
+                applyBoundaryConstraints(false);
+                updateMiniMap();
+                
+                event.preventDefault();
+            } else if (event.touches.length === 2) {
+                // Pinch zoom with improved handling
+                const touch1 = event.touches[0];
+                const touch2 = event.touches[1];
+                
+                // Calculate current distance and center
+                const currentTouchDistance = Math.hypot(
+                    touch2.clientX - touch1.clientX,
+                    touch2.clientY - touch1.clientY
+                );
+                
+                const currentCenter = {
+                    x: (touch1.clientX + touch2.clientX) / 2,
+                    y: (touch1.clientY + touch2.clientY) / 2
+                };
+                
+                // Get initial values
+                const initialDistance = $(this).data('initialPinchDistance');
+                const initialZoom = $(this).data('initialZoomLevel');
+                
+                // Calculate zoom scale factor with smoothing
+                const scaleFactor = currentTouchDistance / initialDistance;
+                const newZoom = Math.min(Math.max(initialZoom * scaleFactor, 0.5), 3);
+                
+                // Calculate panning from center movement
+                const deltaX = currentCenter.x - lastTouchCenter.x;
+                const deltaY = currentCenter.y - lastTouchCenter.y;
+                
+                // Apply zoom centered on touch point
+                zoomLevel = newZoom;
+                
+                // Apply pan based on center movement
+                translateX += deltaX / zoomLevel;
+                translateY += deltaY / zoomLevel;
+                
+                // Update last values
+                lastTouchDistance = currentTouchDistance;
+                lastTouchCenter = currentCenter;
+                
+                // Apply transform
+                $("#main-image").css({
+                    transform: `scale(${zoomLevel}) translate(${translateX}px, ${translateY}px)`
+                });
+                
+                updateZoomIndicator();
+                applyBoundaryConstraints(false);
+                
+                if (zoomLevel > 1) {
+                    updateMiniMap();
+                }
+                
+                event.preventDefault();
+            }
+        });
+        
+        // Touch end with improved transition
+        $(".image-container").on("touchend touchcancel", function() {
+            if (isDragging) {
+                isDragging = false;
+                $(".image-container").removeClass("dragging");
+                applyBoundaryConstraints(true);
+            }
+            
+            // Reset touch tracking
+            lastTouchDistance = 0;
+        });
+    }
+    
+    // Set up zoom events with improved behavior
+    function setupZoomEvents() {
+        $("#main-image").on("wheel", function(event) {
+            event.preventDefault();
+            
+            const delta = event.originalEvent.deltaY;
+            const rect = this.getBoundingClientRect();
+            const offsetX = event.clientX - rect.left;
+            const offsetY = event.clientY - rect.top;
+            
+            // Save old zoom
+            const oldZoom = zoomLevel;
+            
+            // Calculate new zoom with smoother steps
+            if (delta > 0) {
+                zoomLevel = Math.max(0.5, zoomLevel - 0.1);
+            } else {
+                zoomLevel = Math.min(3, zoomLevel + 0.1);
+            }
+            
+            // Calculate cursor position relative to image center
+            const imageRect = this.getBoundingClientRect();
+            const centerX = imageRect.width / 2;
+            const centerY = imageRect.height / 2;
+            
+            // Adjust position to keep cursor point stable
+            const mouseOffsetX = offsetX - centerX;
+            const mouseOffsetY = offsetY - centerY;
+            const zoomFactor = 1 - (oldZoom / zoomLevel);
+            
+            translateX -= mouseOffsetX * zoomFactor / oldZoom;
+            translateY -= mouseOffsetY * zoomFactor / oldZoom;
+            
+            // Apply transform with smoother transition
+            $(this).css({
+                transform: `scale(${zoomLevel}) translate(${translateX}px, ${translateY}px)`,
+                cursor: zoomLevel > 1 ? "grab" : "default",
+                transition: "transform 0.05s ease-out"
+            });
+            
+            // Remove transition after applying
+            setTimeout(() => {
+                $(this).css("transition", "none");
+            }, 50);
+            
+            applyBoundaryConstraints(true);
+            updateZoomIndicator();
+        });
+    }
+    
+    // Keyboard navigation with updated key mappings - fixed i key toggle
+    function setupKeyboardNavigation() {
+        $(document).on("keydown", function(e) {
+            if (!selectedInfraction) return;
+            
+            switch(e.key) {
+                case "ArrowLeft":
+                    selectFrame(selectedFrame - 1);
+                    break;
+                case "ArrowRight":
+                    selectFrame(selectedFrame + 1);
+                    break;
+                case "ArrowUp":
+                    zoomLevel = Math.min(3, zoomLevel + 0.1);
+                    updateZoomIndicator();
+                    applyBoundaryConstraints(true);
+                    break;
+                case "ArrowDown":
+                    zoomLevel = Math.max(0.5, zoomLevel - 0.1);
+                    updateZoomIndicator();
+                    applyBoundaryConstraints(true);
+                    break;
+                case "r":
+                case "R":
+                    resetZoom();
+                    break;
+                case "F":
+                case "f":
+                    toggleFullscreenMode();
+                    break;
+                // Removed i key handler from here since it's handled in initSidePanel
+            }
+        });
+    }
+    
+    // Apply boundary constraints with improved feedback
+    function applyBoundaryConstraints(forceSnapBack = false) {
+        // Set transform immediately for immediate response
+        $("#main-image").css("transform", `scale(${zoomLevel}) translate(${translateX}px, ${translateY}px)`);
+        
+        // If not zoomed, reset position
+        if (zoomLevel <= 1) {
+            translateX = 0;
+            translateY = 0;
+            $(".boundary-warning").css("opacity", 0);
+            $("#main-image").css({
+                "transform": `scale(${zoomLevel}) translate(0px, 0px)`,
+                "cursor": "default" // Reset cursor when zoom level is 1
+            });
+            $(".mini-map-container").hide();
+            return;
+        }
+        
+        // When zoomed, use grab cursor
+        $("#main-image").css("cursor", isDragging ? "grabbing" : "grab");
+        
+        // Calculate scaled image dimensions
+        const scaledImageWidth = imageWidth * zoomLevel;
+        const scaledImageHeight = imageHeight * zoomLevel;
+        
+        // Calculate maximum translation values
+        const maxTranslateX = Math.max(0, (scaledImageWidth - containerWidth) / (2 * zoomLevel));
+        const maxTranslateY = Math.max(0, (scaledImageHeight - containerHeight) / (2 * zoomLevel));
+        
+        // Limit translation range
+        let newTranslateX = translateX;
+        let newTranslateY = translateY;
+        
+        if (newTranslateX > maxTranslateX) newTranslateX = maxTranslateX;
+        if (newTranslateX < -maxTranslateX) newTranslateX = -maxTranslateX;
+        if (newTranslateY > maxTranslateY) newTranslateY = maxTranslateY;
+        if (newTranslateY < -maxTranslateY) newTranslateY = -maxTranslateY;
+        
+        // Check if snap back needed
+        const needsSnapBack = (newTranslateX !== translateX || newTranslateY !== translateY);
+        
+        // Update position
+        translateX = newTranslateX;
+        translateY = newTranslateY;
+        
+        // If snap back needed, apply feedback
+        if (needsSnapBack) {
+            $("#main-image").css({
+                "transform": `scale(${zoomLevel}) translate(${translateX}px, ${translateY}px)`,
+                "transition": forceSnapBack ? "transform 0.3s ease-out" : "none"
+            });
+            
+            // Remove transition after animation
+            if (forceSnapBack) {
+                setTimeout(() => {
+                    $("#main-image").css("transition", "none");
+                }, 300);
+            }
+            
+            showBoundaryFeedback();
+        }
+        
+        // Update boundary warnings
+        updateBoundaryWarnings(maxTranslateX, maxTranslateY);
+    }
+    
+    // Update boundary warning display with improved visuals
+    function updateBoundaryWarnings(maxX, maxY) {
+        // Only show warnings when near boundary
+        const threshold = 0.85;
+        const rightRatio = translateX / maxX;
+        const leftRatio = -translateX / maxX;
+        const bottomRatio = translateY / maxY;
+        const topRatio = -translateY / maxY;
+        
+        $(".boundary-warning.right").css("opacity", (rightRatio > threshold) ? Math.min(1, (rightRatio - threshold) * 5) : 0);
+        $(".boundary-warning.left").css("opacity", (leftRatio > threshold) ? Math.min(1, (leftRatio - threshold) * 5) : 0);
+        $(".boundary-warning.bottom").css("opacity", (bottomRatio > threshold) ? Math.min(1, (bottomRatio - threshold) * 5) : 0);
+        $(".boundary-warning.top").css("opacity", (topRatio > threshold) ? Math.min(1, (topRatio - threshold) * 5) : 0);
+    }
+    
+    // Show boundary collision feedback with smoother animation
+    function showBoundaryFeedback() {
+        // Visual effect
+        $(".image-container").addClass("boundary-hit");
+        setTimeout(() => {
+            $(".image-container").removeClass("boundary-hit");
+        }, 300);
+        
+        // Flash warnings
+        $(".boundary-warning").css("opacity", 0.7);
+        setTimeout(() => {
+            const maxTranslateX = Math.max(0, (imageWidth * zoomLevel - containerWidth) / (2 * zoomLevel));
+            const maxTranslateY = Math.max(0, (imageHeight * zoomLevel - containerHeight) / (2 * zoomLevel));
+            updateBoundaryWarnings(maxTranslateX, maxTranslateY);
+        }, 200);
+    }
+    
+    // Function to apply debouncing for performance
+    function debounce(func, wait) {
+        let timeout;
+        return function(...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), wait);
+        };
+    }
+</script>
+</body>
+</html>
+indexLocalFetching (1).html
+Displaying indexLocalFetching (1).html.

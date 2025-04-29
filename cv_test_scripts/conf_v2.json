@@ -1,0 +1,18 @@
+{
+  "paths": {
+    "inputDir": "../../videos/2-23",
+    "outputDir": "../2-08-results"
+  },
+  "boundingBox": {
+    "width": 75,
+    "height": 100
+  },
+  "frameSkip": 2,
+  "minArea": 500,
+  "deltaThresh": 20,
+  "weight": 0.6,
+  "scalingFactaor": 6,
+  "brightnessFactor": 100,
+  "topCrop": 100,
+  "bottomCrop": 0
+}
