@@ -7,7 +7,7 @@ This repository contains the pipelines for infraction detection in track & field
 First, clone the repository to your local machine:
 
 ```bash
-git clone https://github.com/aJimenez19037/trackpack.git
+git clone https://github.com/athyk213/trackstar.git
 cd trackpack
 ```
 
@@ -53,13 +53,6 @@ This pipeline is used to detect infractions in **videos that are stored in a vid
 
 ```bash
 ./run_full.sh
-```
-
-### Demo Pipeline
-This pipeline is strictly to show the **"behind-the-scenes"** of the GUI. It demonstrates how the motion detection algorithm, lane detection algorithm, and infraction detection model works together to detect infractions and display them on the GUI. It uses the `pipeline/demo_pipeline.py` file. Right now, it is set to take in videos from the `videos/2-08` directory. Run the following command for this pipeline:
-
-```bash
-python3 pipeline/demo_pipeline.py
 ```
 
 To kill the processes, press Ctrl+C in the terminal.
