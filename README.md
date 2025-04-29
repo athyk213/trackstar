@@ -7,7 +7,7 @@ Store any video data in a folder called `videos` in the root directory of this r
 
 Example file structure:
 ```
-trackpack/
+trackstar/
 ├── videos/
 │   └── 2-08
 │       ├── Video-1.mp4
